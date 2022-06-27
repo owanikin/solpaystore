@@ -1,5 +1,5 @@
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
-import { clusterApiUrl, Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { clusterApiUrl, Connection, PublicKey, Transaction } from "@solana/web3.js";
 import { createTransferCheckedInstruction, getAssociatedTokenAddress, getMint } from "@solana/spl-token";
 import BigNumber from "bignumber.js";
 import products from "./products.json";
@@ -15,22 +15,22 @@ const createTransaction = async (req, res) => {
 
         // If we don't have something we need, stop!
         if (!buyer) {
-            return res.status(400).json({
+             res.status(400).json({
                 message: "Missing buyer address",
             });
         }
 
         if (!orderID) {
-            return res.status(400).json({
+             res.status(400).json({
                 message: "Missing Order ID",
-            })
+            });
         }
 
         // Fetch item price from products.json using itemID.
         const itemPrice = products.find((item) => item.id === itemID).price;
 
         if (!itemPrice) {
-            return res.status(404).json({
+             res.status(404).json({
                 message: "Item not found. Please check item ID",
             });
         }
@@ -70,7 +70,7 @@ const createTransaction = async (req, res) => {
             // We'll use our OrderID to find this transaction later
             pubkey: new PublicKey(orderID),
             isSigner: false,
-            isWritable: false
+            isWritable: false,
         });
 
         tx.add(transferInstruction);
@@ -79,18 +79,19 @@ const createTransaction = async (req, res) => {
         const serializedTransaction = tx.serialize({
             requireAllSignatures: false,
         });
+
         const base64 = serializedTransaction.toString("base64");
         
         res.status(200).json({
             transaction: base64,
-        })
+        });
     } catch (error) {
         console.error(error);
 
         res.status(500).json({ error: "error creating tx" });
         return;
     }
-}
+};
 
 export default function handler(req, res) {
     if (req.method === "POST") {
