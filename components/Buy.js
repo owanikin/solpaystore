@@ -4,12 +4,12 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { InfinitySpin } from "react-loader-spinner";
 import IPFSDownload from "./IpfsDownload";
 import { findReference, FindReferenceError } from "@solana/pay";
-import { addOrder } from "../lib/api";
+import { addOrder, hasPurchased, fetchItem } from "../lib/api";
 
 const STATUS = {
     Initial: "Initial",
     Submitted: "Submitted",
-    Paid: "Paid"
+    Paid: "Paid",
 };
 
 export default function Buy({ itemID }) {
@@ -17,9 +17,6 @@ export default function Buy({ itemID }) {
     const { publicKey, sendTransaction } = useWallet();
     const orderID = useMemo(() => Keypair.generate().publicKey, []);  // Public key used to identify the order
     const [loading, setLoading] = useState(false); 
-
-    const [paid, setPaid] = useState(null);
-
     const [status, setStatus] = useState(STATUS.Initial);  // Tracking transaction status
 
     // useMemo is a React hook that only compute th value if the dependencies change
@@ -36,7 +33,7 @@ export default function Buy({ itemID }) {
     const processTransaction = async () => {
         setLoading(true);
         const txResponse = await fetch("../api/createTransaction", {
-            method: "POST",
+            method: 'POST',
             headers: {
                 "Content-Type": "application/json",
             },
@@ -64,6 +61,20 @@ export default function Buy({ itemID }) {
     };
 
     useEffect(() => {
+        // Check if this address has already purchased this item
+        // If so, fetch the item and set paid to true
+        // Async function to avoid blocking the UI
+        async function checkPurchased() {
+            const purchased = await hasPurchased(publicKey, itemID);
+            if (purchased) {
+                setStatus(STATUS.Paid);
+                console.log("Address has already purchased this item!");
+            }
+        } 
+        checkPurchased()
+    }, [publicKey, itemID]);
+
+    useEffect(() => {
         // Check if transaction was confirmed
         if (status === STATUS.Submitted) {
             setLoading(true);
@@ -89,6 +100,15 @@ export default function Buy({ itemID }) {
             return () => {
                 clearInterval(interval);
             };
+        }
+
+        async function getItem(itemID) {
+            const item = await fetchItem(itemID);
+            setItem(item);
+        }
+
+        if (status === STATUS.Paid) {
+            getItem(itemID);
         }
     }, [status]);
 
